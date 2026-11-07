@@ -33,9 +33,9 @@
       "name": "Корректная и полная консультация",
       "description": "Ответ точный, полный и соответствует запросу.",
       "weight": 20,
-      "response_type": "binary",
-      "allow_na": false,
-      "scale_max": 1
+      "response_type": "scale",
+      "allow_na": true,
+      "scale_max": 20
     },
     {
       "id": "empathy",
@@ -43,7 +43,7 @@
       "description": "Тон и формулировки учитывают ситуацию клиента.",
       "weight": 15,
       "response_type": "binary",
-      "allow_na": true,
+      "allow_na": false,
       "scale_max": 1
     },
     {
@@ -51,9 +51,9 @@
       "name": "Управление диалогом, скорость и грамотность",
       "description": "Логичность, понятность, грамотность и управление ходом разговора.",
       "weight": 15,
-      "response_type": "binary",
+      "response_type": "scale",
       "allow_na": false,
-      "scale_max": 1
+      "scale_max": 10
     },
     {
       "id": "closing",
