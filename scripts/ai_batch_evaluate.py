@@ -1,7 +1,7 @@
 """Run the real LLM evaluator on DEV conversations.
 
 Examples:
-    set OPENAI_API_KEY=...
+    set GEMINI_API_KEY=...
     python scripts/ai_batch_evaluate.py
     python scripts/ai_batch_evaluate.py --limit 20
 
