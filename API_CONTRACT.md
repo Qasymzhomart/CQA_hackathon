@@ -71,9 +71,9 @@ Runs the Gemini-powered AI/Analytics pipeline:
 
 Required server environment:
 
-```bash
-OPENAI_API_KEY=...
-CQA_AI_MODEL=gpt-5.4-mini-2026-03-17
+```powershell
+$env:GEMINI_API_KEY="YOUR_GEMINI_KEY"
+$env:CQA_AI_MODEL="gemini-3.5-flash-lite"
 ```
 
 The response also contains `prompt_version`, `model`, `retry_count`,
