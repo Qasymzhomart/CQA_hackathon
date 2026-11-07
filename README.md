@@ -42,69 +42,101 @@ API_CONTRACT.md    frontend integration contract
 requirements.txt
 ```
 
-## Run backend
+## Quick start from a clean clone
+
+### 1. Clone
+
+```powershell
+git clone https://github.com/Qasymzhomart/CQA_hackathon.git
+cd CQA_hackathon
+```
+
+### 2. Install
 
 Python 3.11+ recommended.
 
-```bash
-python -m venv .venv
+```powershell
+pip install -r requirements.txt
 ```
 
-Windows:
+### 3. Configure Gemini
 
-```bash
-.venv\Scripts\activate
-pip install -r requirements.txt
-uvicorn backend.main:app --reload
+Set the key in the same terminal where backend will run:
+
+```powershell
+$env:GEMINI_API_KEY="YOUR_GEMINI_KEY"
+$env:CQA_AI_MODEL="gemini-3.5-flash-lite"
 ```
 
-macOS / Linux:
+Do not commit API keys.
 
-```bash
-source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn backend.main:app --reload
+### 4. Start backend
+
+```powershell
+uvicorn backend.main:app --reload --port 8000
 ```
 
 Open:
 
-- API: http://localhost:8000
-- Swagger: http://localhost:8000/docs
-- Health check: http://localhost:8000/health
+- Swagger: http://127.0.0.1:8000/docs
+- Health: http://127.0.0.1:8000/health
 
-CORS is enabled for hackathon frontend integration.
+### 5. Start frontend
+
+Open a second terminal in the repository:
+
+```powershell
+python -m http.server 5500 --directory frontend
+```
+
+Open:
+
+- http://127.0.0.1:5500
+
+The **Запустить оценку** button calls the real Gemini endpoint:
+`POST /api/ai/evaluate/{conversation_id}`.
 
 ## Import organizer DEV data
 
-Set the organizer endpoint in an environment variable. The script automatically requests `group_id=DEV`.
+Copy the full organizer DEV URL from the Student Guide. It may already contain
+`group_id=DEV`; the importer handles both forms.
 
-Windows CMD:
-
-```bat
-set CQA_DATASET_URL=https://YOUR_DATASET_ENDPOINT
+```powershell
+$env:CQA_DATASET_URL="FULL_ORGANIZER_DEV_URL"
 python scripts/import_dev.py
 ```
 
-PowerShell:
+Expected result:
 
-```powershell
-$env:CQA_DATASET_URL="https://YOUR_DATASET_ENDPOINT"
-python scripts/import_dev.py
+```text
+"valid": true
+"total": 65
 ```
 
-If the API requires a bearer token:
-
-```powershell
-$env:CQA_DATASET_TOKEN="YOUR_TOKEN"
-```
-
-The script validates the expected 65-record DEV distribution and saves the normalized result to `data/dev_dataset.json`.
+The normalized file is saved as `data/dev_dataset.json`.
 
 ## Run tests
 
-```bash
-pytest -q
+```powershell
+python -m pytest -q
 ```
+
+## Run the required 20-dialog AI check
+
+After `data/dev_dataset.json` exists:
+
+```powershell
+python scripts/ai_batch_evaluate.py
+```
+
+The script evaluates a balanced sample:
+- 10 RU
+- 5 KZ
+- 5 EN
+
+It handles Gemini free-tier rate limits, retries, saves progress after every
+conversation and resumes if restarted. Results go to
+`data/ai_batch_results.json`.
 
 ## Frontend integration
 
