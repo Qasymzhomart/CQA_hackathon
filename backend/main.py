@@ -273,3 +273,49 @@ def list_appeals():
 @app.get("/api/evaluations")
 def list_evaluations():
     return list(EVALUATIONS.values())
+
+
+# Real AI evaluator (AI / Analytics role).
+@app.post("/api/ai/evaluate/{conversation_id}")
+def ai_evaluate(conversation_id: str):
+    conversation = CONVERSATIONS.get(conversation_id)
+    if conversation is None:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    try:
+        from ai_analytics.adapter import to_backend_results
+        from ai_analytics.evaluator import evaluate_conversation
+        from .models import CriterionResult
+
+        conversation_payload = conversation.model_dump()
+        criteria_payload = [c.model_dump() for c in CHECKLIST]
+        run = evaluate_conversation(conversation_payload, criteria_payload)
+        backend_payload = to_backend_results(run.evaluation, conversation_payload)
+        results = [CriterionResult(**item) for item in backend_payload]
+        calculation = calculate_weighted_score(CHECKLIST, results)
+
+        evaluation_id = str(uuid4())
+        record = {
+            "evaluation_id": evaluation_id,
+            "conversation_id": conversation_id,
+            "checklist_version": CHECKLIST_VERSION,
+            "prompt_version": run.prompt_version,
+            "assessment_method": "llm_structured",
+            "model": run.usage.model,
+            "results": [x.model_dump() for x in results],
+            **calculation,
+            "ai_usage": run.usage.model_dump(),
+            "retry_count": run.retry_count,
+            "latency_ms": run.latency_ms,
+            "status": "evaluated",
+        }
+        EVALUATIONS[evaluation_id] = record
+        return record
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception as exc:
+        # Avoid exposing secrets or provider internals to the frontend.
+        raise HTTPException(
+            status_code=503,
+            detail="AI evaluation unavailable. Check OPENAI_API_KEY/model configuration.",
+        ) from exc
