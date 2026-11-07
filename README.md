@@ -175,3 +175,24 @@ The frontend uses `http://localhost:8000` as its API URL. To point at a deployed
 - `POST /api/reviews`: body includes `evaluation_id`, `criterion_id`, `confirmed_score`, `reviewer_comment`.
 
 Security: no account login is needed for the demo, as specified in the task. Do not expose the reviewer endpoints or permissive CORS publicly without adding authorization.
+
+
+## Real AI evaluation with Gemini
+
+Set your Gemini API key in the same terminal where the backend will run:
+
+```powershell
+$env:GEMINI_API_KEY="YOUR_GEMINI_KEY"
+$env:CQA_AI_MODEL="gemini-3.5-flash-lite"
+uvicorn backend.main:app --reload
+```
+
+Then use Swagger:
+
+`POST /api/ai/evaluate/{conversation_id}`
+
+This endpoint uses Gemini structured output, validates criterion IDs, N/A rules,
+score ranges and evidence message IDs, retries once on an invalid model result,
+then passes the validated criterion results to backend weighted scoring.
+
+`POST /api/evaluate/{conversation_id}` remains a demo-only heuristic fallback.
