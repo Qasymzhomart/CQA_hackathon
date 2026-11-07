@@ -2,7 +2,7 @@
 
 ## Selected model
 
-Default: `gemini-2.5-flash` through the Gemini Developer API.
+Default: `gemini-3.5-flash-lite` through the Gemini Developer API.
 
 Why:
 - structured JSON output is supported by the Google Gen AI SDK;
@@ -13,7 +13,7 @@ Why:
 The model can be changed without code:
 
 ```powershell
-$env:CQA_AI_MODEL="gemini-2.5-flash"
+$env:CQA_AI_MODEL="gemini-3.5-flash-lite"
 ```
 
 ## Required environment
