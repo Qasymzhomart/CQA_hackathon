@@ -47,6 +47,7 @@ class EvaluationRequest(BaseModel):
 
 class AppealRequest(BaseModel):
     evaluation_id: str
+    criterion_id: str
     comment: str
 
 
