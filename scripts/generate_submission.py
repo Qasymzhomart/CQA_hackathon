@@ -83,6 +83,11 @@ def main() -> None:
     parser.add_argument("--set", choices=["dev", "prod"], required=True)
     parser.add_argument("--dataset")
     parser.add_argument("--team-name", default=os.getenv("CQA_TEAM_NAME"))
+    parser.add_argument(
+        "--checklist",
+        default="data/checklist_v1.json",
+        help="Checklist JSON to use. For PROD you can pass an exported active checklist.",
+    )
     parser.add_argument("--delay", type=float, default=6.0)
     parser.add_argument("--rate-wait", type=float, default=40.0)
     parser.add_argument("--rate-retries", type=int, default=5)
@@ -106,7 +111,10 @@ def main() -> None:
     if not dataset_path.exists():
         raise SystemExit(f"Dataset not found: {dataset_path}")
 
-    checklist_path = ROOT / "data" / "checklist_v1.json"
+    checklist_path = ROOT / args.checklist
+    if not checklist_path.exists():
+        raise SystemExit(f"Checklist not found: {checklist_path}")
+
     dataset = json.loads(dataset_path.read_text(encoding="utf-8-sig"))
     checklist = json.loads(checklist_path.read_text(encoding="utf-8-sig"))
 
