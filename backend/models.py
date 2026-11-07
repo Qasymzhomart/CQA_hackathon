@@ -29,6 +29,7 @@ class Criterion(BaseModel):
     response_type: Literal["binary", "scale", "flag"] = "binary"
     allow_na: bool = True
     scale_max: float = 1.0
+    allowed_values: Optional[list[float]] = None
 
 
 class CriterionResult(BaseModel):
