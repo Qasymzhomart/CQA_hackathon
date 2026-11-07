@@ -40,3 +40,17 @@ The backend calculates the final weighted score. The frontend should not calcula
 - Remaining weights are redistributed proportionally to total 100%.
 - Final score and effective weights are rounded to 2 decimals.
 - `Грубые ошибки` is a separate flag, not part of the 100% weight.
+
+
+## Updated demo interface contract
+- `POST /api/evaluate/{conversation_id}`: automatically produces a demo heuristic evaluation.
+- `GET /api/evaluations`: lists all current in-memory evaluations.
+- `GET /api/appeals`: lists current appeals.
+- `POST /api/appeals` body: `{"evaluation_id":"…","criterion_id":"contact","comment":"…"}`.
+- `POST /api/reviews` body: `{"evaluation_id":"…","criterion_id":"contact","confirmed_score":1,"reviewer_comment":"…"}`.
+- `GET /api/checklist` and `PUT /api/checklist`: current criterion configuration.
+- `GET /api/conversations`, `GET /api/conversations/{id}`, `POST /api/conversations/import`.
+
+`/api/evaluate` returns an `evaluation_id`, `conversation_id`, `status`, `final_score`, `results` (including `explanation`, `evidence`, `na` and `na_reason`), weighted `criteria` contributions and `gross_errors`. Transcript message references are 1-based `M1`, `M2`, etc.
+
+**Note:** This is a demonstration evaluation flow, not model-powered analysis. API state is in-memory and disappears when the backend process restarts.
