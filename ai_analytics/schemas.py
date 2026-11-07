@@ -8,11 +8,11 @@ class AICriterionResult(BaseModel):
     criterion_id: str
     applicable: bool
     answer: str
-    score: Optional[float] = None
+    score: Optional[float]
     reason: str = Field(min_length=1)
-    evidence_ids: list[str] = Field(default_factory=list)
-    checked_message_ids: list[str] = Field(default_factory=list)
-    critical_error: bool = False
+    evidence_ids: list[str]
+    checked_message_ids: list[str]
+    critical_error: bool
 
 
 class AIEvaluation(BaseModel):
