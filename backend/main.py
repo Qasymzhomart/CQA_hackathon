@@ -148,10 +148,13 @@ def create_appeal(payload: AppealRequest):
         raise HTTPException(status_code=404, detail="Evaluation not found")
     if not payload.comment.strip():
         raise HTTPException(status_code=400, detail="Appeal comment is required")
+    if not any(x["criterion_id"] == payload.criterion_id for x in record["results"]):
+        raise HTTPException(status_code=404, detail="Criterion result not found")
 
     appeal = {
         "appeal_id": str(uuid4()),
         "evaluation_id": payload.evaluation_id,
+        "criterion_id": payload.criterion_id,
         "comment": payload.comment,
         "status": "open",
     }
@@ -180,9 +183,19 @@ def reviewer_override(payload: ReviewRequest):
 
     from .models import CriterionResult
 
+    if not payload.reviewer_comment.strip():
+        raise HTTPException(status_code=400, detail="Reviewer reason is required")
+    criterion = next((c for c in CHECKLIST if c.id == payload.criterion_id), None)
+    if criterion and payload.confirmed_score > criterion.scale_max:
+        raise HTTPException(status_code=400, detail="Score exceeds criterion maximum")
     typed_results = [CriterionResult(**x) for x in updated_results]
     calculation = calculate_weighted_score(CHECKLIST, typed_results)
 
+    for appeal in APPEALS:
+        if appeal["evaluation_id"] == payload.evaluation_id and appeal["criterion_id"] == payload.criterion_id:
+            appeal["status"] = "reviewed"
+            appeal["reviewer_comment"] = payload.reviewer_comment
+            appeal["confirmed_score"] = payload.confirmed_score
     record.update(
         {
             "results": updated_results,
