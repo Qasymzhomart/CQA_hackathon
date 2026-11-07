@@ -42,14 +42,19 @@ def _call_model(
         ),
     )
 
-    parsed = response.parsed
-    if parsed is None:
-        raise ValueError("Gemini did not return a parseable structured evaluation")
-
-    if isinstance(parsed, AIEvaluation):
-        evaluation = parsed
+    parsed = getattr(response, "parsed", None)
+    if parsed is not None:
+        if isinstance(parsed, AIEvaluation):
+            evaluation = parsed
+        else:
+            evaluation = AIEvaluation.model_validate(parsed)
     else:
-        evaluation = AIEvaluation.model_validate(parsed)
+        # Some google-genai versions expose valid structured output only in text.
+        # We still validate it with the exact same Pydantic schema.
+        response_text = getattr(response, "text", None)
+        if not response_text:
+            raise ValueError("Gemini did not return a structured evaluation")
+        evaluation = AIEvaluation.model_validate_json(response_text)
 
     usage = getattr(response, "usage_metadata", None)
     input_tokens = int(getattr(usage, "prompt_token_count", 0) or 0)
