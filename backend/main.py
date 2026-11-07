@@ -39,13 +39,13 @@ CHECKLIST = [
               weight=20, response_type="binary", allow_na=True),
     Criterion(id="consultation", name="Корректная и полная консультация",
               description="Ответ точный, полный и соответствует запросу.",
-              weight=20, response_type="binary", allow_na=False),
+              weight=20, response_type="scale", scale_max=20, allow_na=True),
     Criterion(id="empathy", name="Эмпатия и клиентоориентированность",
               description="Тон и формулировки учитывают ситуацию клиента.",
-              weight=15, response_type="binary", allow_na=True),
+              weight=15, response_type="binary", allow_na=False),
     Criterion(id="dialog", name="Управление диалогом, скорость и грамотность",
               description="Логичность, понятность, грамотность и управление ходом разговора.",
-              weight=15, response_type="binary", allow_na=False),
+              weight=15, response_type="scale", scale_max=10, allow_na=False),
     Criterion(id="closing", name="Завершение",
               description="Корректное завершение и проверка, что вопрос клиента решен.",
               weight=5, response_type="binary", allow_na=True),
@@ -191,3 +191,72 @@ def reviewer_override(payload: ReviewRequest):
         }
     )
     return record
+
+# Demo-only rule-based evaluator. It does not use a language model.
+from .models import CriterionResult
+import re
+
+def _contains(text, words):
+    return any(word in text for word in words)
+
+@app.post("/api/evaluate/{conversation_id}")
+def auto_evaluate(conversation_id: str):
+    conversation = CONVERSATIONS.get(conversation_id)
+    if conversation is None:
+        raise HTTPException(404, "Conversation not found")
+    utterances = conversation.transcript
+    operator = [(idx, u) for idx, u in enumerate(utterances) if u.speaker.lower() in ("operator", "agent")]
+    clients = [u for u in utterances if u.speaker.lower() == "client"]
+    all_operator = " ".join(u.text.lower() for _, u in operator)
+    all_client = " ".join(u.text.lower() for u in clients)
+    first = operator[0][1].text.lower() if operator else ""
+    last = operator[-1][1].text.lower() if operator else ""
+    hello = _contains(first, ("здравств", "добрый", "сәлем", "қайырлы", "hello", "hi ", "good morning", "good afternoon"))
+    intro = _contains(first, ("менің атым", "мен ", "менеджер", "меня зовут", "my name", "this is ", "оператор"))
+    need = _contains(all_operator, ("уточн", "подскаж", "какой", "какая", "қай", "нақтыл", "which", "could you", "please tell", "?"))
+    # Identification is relevant only when protected actions or account-specific information are requested.
+    protected = _contains(all_client, ("перевод", "вывод", "снять", "сменить пароль", "balance", "withdraw", "transfer", "құпиясөз", "аударым", "баланс"))
+    identified = _contains(all_operator, ("удостовер", "документ", "код подтвержд", "verify your", "verification", "жеке бас", "растау", "идентификац"))
+    guidance = _contains(all_operator, ("открой", "выбер", "нажм", "проверь", "обратит", "бөлім", "таңда", "ашыңыз", "click", "open ", "select ", "follow ", "download"))
+    empathy = _contains(all_operator, ("помогу", "понима", "сожале", "кешір", "түсін", "көмектес", "sorry", "understand", "happy to help", "help"))
+    closing = _contains(last, ("спасибо", "до свид", "всего добр", "рахмет", "сау бол", "көмек қажет", "thank you", "goodbye", "anything else"))
+    gross = _contains(all_operator, ("переведите мне лично", "мой личный счет", "оплатите мне", "send money to me", "жеке шотыма"))
+    checks = {
+        "contact": (1 if hello and intro else 0, "Приветствие и представление проверены в первом ответе."),
+        "needs": (1 if need else 0, "Проверены уточняющие вопросы оператора."),
+        "identification": (1 if identified else 0, "Проверено подтверждение личности до защищённых действий."),
+        "consultation": (20 if guidance else 10 if operator else 0, "Эвристика оценивает наличие конкретных инструкций; правильность фактов требует ручной проверки."),
+        "empathy": (1 if empathy else 0, "Проверены вежливые и поддерживающие формулировки."),
+        "dialog": (10 if len(operator)>1 else 7 if operator else 0, "Оценена связность по количеству ответов; скорость и грамотность требуют ручной проверки."),
+        "closing": (1 if closing else 0, "Проверено прощание или итог в последнем ответе."),
+        "gross_errors": (1 if gross else 0, "Поиск явных формулировок грубого нарушения (не исчерпывающая проверка).")
+    }
+    results = []
+    for c in CHECKLIST:
+        raw, reason = checks.get(c.id, (0, "Для нового критерия нужна ручная проверка."))
+        na = (c.id == "identification" and not protected and c.allow_na) or (c.id == "needs" and not clients and c.allow_na)
+        if c.response_type == "scale":
+            options = [0, 5, 10, 15, 20] if c.scale_max == 20 else [0, 4, 7, 10]
+            raw = min(options, key=lambda x: abs(x - raw)) if c.id not in ("consultation", "dialog") else raw
+        raw = min(float(raw), c.scale_max) if c.response_type != "flag" else float(raw)
+        evidence_items = [f"M{i+1}: {u.text}" for i,u in operator[:2]]
+        if c.id == "closing" and operator:
+            evidence_items = [f"M{operator[-1][0]+1}: {operator[-1][1].text}"]
+        results.append(CriterionResult(criterion_id=c.id, answer="N/A" if na else ("YES" if raw else "NO"),
+            raw_score=raw, explanation=reason, evidence=evidence_items,
+            na=na, na_reason="Запрос не требовал идентификации." if na and c.id=="identification" else "Недостаточно данных для оценки." if na else None))
+    calculation = calculate_weighted_score(CHECKLIST, results)
+    evaluation_id = str(uuid4())
+    record = {"evaluation_id":evaluation_id,"conversation_id":conversation_id,
+              "checklist_version":CHECKLIST_VERSION,"results":[x.model_dump() for x in results],
+              **calculation,"status":"evaluated","assessment_method":"demo_heuristics"}
+    EVALUATIONS[evaluation_id] = record
+    return record
+
+@app.get("/api/appeals")
+def list_appeals():
+    return APPEALS
+
+@app.get("/api/evaluations")
+def list_evaluations():
+    return list(EVALUATIONS.values())
