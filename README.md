@@ -96,24 +96,29 @@ Open:
 The **Запустить оценку** button calls the real Gemini endpoint:
 `POST /api/ai/evaluate/{conversation_id}`.
 
-## Import organizer DEV data
+## Import organizer DEV / CONTROL data
 
-Copy the full organizer DEV URL from the Student Guide. It may already contain
-`group_id=DEV`; the importer handles both forms.
+Copy the full organizer URL from the Student Guide or control-data announcement.
+
+DEV:
 
 ```powershell
-$env:CQA_DATASET_URL="FULL_ORGANIZER_DEV_URL"
-python scripts/import_dev.py
+$env:CQA_DATASET_URL="FULL_ORGANIZER_URL"
+python scripts/import_dataset.py --group-id DEV
 ```
 
-Expected result:
+Expected DEV result: 65 normalized conversations saved to
+`data/dev_dataset.json`.
 
-```text
-"valid": true
-"total": 65
+When organizers provide a control group ID, no code change is needed:
+
+```powershell
+python scripts/import_dataset.py --group-id CONTROL_ID
 ```
 
-The normalized file is saved as `data/dev_dataset.json`.
+That dataset is saved under `data/<group_id>_dataset.json`. The importer accepts
+organizer channel names `agent chat` / `voice call` and normalizes them to
+the backend format.
 
 ## Run tests
 
