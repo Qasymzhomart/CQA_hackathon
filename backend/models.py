@@ -1,0 +1,57 @@
+from typing import Literal, Optional
+from pydantic import BaseModel, Field
+
+
+Language = Literal["RU", "KZ", "EN"]
+Channel = Literal["agent_chat", "voice_call"]
+
+
+class Utterance(BaseModel):
+    timestamp: str
+    speaker: str
+    text: str
+
+
+class Conversation(BaseModel):
+    conversation_id: str
+    channel: Channel
+    language: Language
+    transcript: list[Utterance]
+    audio_url: Optional[str] = None
+
+
+class Criterion(BaseModel):
+    id: str
+    name: str
+    description: str = ""
+    weight: float = Field(ge=0, le=100)
+    response_type: Literal["binary", "scale", "flag"] = "binary"
+    allow_na: bool = True
+    scale_max: float = 1.0
+
+
+class CriterionResult(BaseModel):
+    criterion_id: str
+    answer: str
+    raw_score: float = Field(ge=0)
+    explanation: str
+    evidence: list[str] = []
+    na: bool = False
+    na_reason: Optional[str] = None
+
+
+class EvaluationRequest(BaseModel):
+    conversation_id: str
+    results: list[CriterionResult]
+
+
+class AppealRequest(BaseModel):
+    evaluation_id: str
+    comment: str
+
+
+class ReviewRequest(BaseModel):
+    evaluation_id: str
+    criterion_id: str
+    confirmed_score: float = Field(ge=0)
+    reviewer_comment: str = ""
