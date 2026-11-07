@@ -51,7 +51,7 @@ function renderEvaluation(e){
 async function evaluate(){
  if(!state.current)return;
  const b=$("#evaluateBtn");b.disabled=true;b.textContent="Оцениваем…";
- try{const e=await api("/api/evaluate/"+encodeURIComponent(state.current.conversation_id),{method:"POST"});state.evaluations[e.conversation_id]=e;renderEvaluation(e);renderDashboard();notify("Оценка выполнена. Демо использует эвристические правила, не AI.")}catch(e){notify("Ошибка оценки: "+e.message,true)}finally{b.disabled=false;b.textContent="▶ Запустить оценку"}
+ try{const e=await api("/api/ai/evaluate/"+encodeURIComponent(state.current.conversation_id),{method:"POST"});state.evaluations[e.conversation_id]=e;renderEvaluation(e);renderDashboard();notify("AI-оценка Gemini выполнена.")}catch(e){notify("Ошибка AI-оценки: "+e.message,true)}finally{b.disabled=false;b.textContent="▶ Запустить оценку"}
 }
 function startAppeal(id){
  const e=state.evaluations[state.current?.conversation_id];if(!e){notify("Сначала оцените диалог",true);return}
