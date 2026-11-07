@@ -11,6 +11,19 @@ EXPECTED_LANGUAGES = {"RU": 35, "KZ": 15, "EN": 15}
 EXPECTED_CHANNELS = {"agent_chat": 60, "voice_call": 5}
 
 
+def _normalize_channel(value: str) -> str:
+    mapping = {
+        "agent chat": "agent_chat",
+        "agent_chat": "agent_chat",
+        "voice call": "voice_call",
+        "voice_call": "voice_call",
+    }
+    normalized = mapping.get(str(value).strip().lower())
+    if normalized is None:
+        raise ValueError(f"Unsupported channel: {value!r}")
+    return normalized
+
+
 def normalize_dataset(payload: dict[str, Any]) -> list[Conversation]:
     records = payload.get("records")
     if records is None and isinstance(payload.get("data"), dict):
@@ -19,7 +32,13 @@ def normalize_dataset(payload: dict[str, Any]) -> list[Conversation]:
     if not isinstance(records, list):
         raise ValueError("Dataset must contain records or data.records")
 
-    return [Conversation(**record) for record in records]
+    normalized_records = []
+    for record in records:
+        item = dict(record)
+        item["channel"] = _normalize_channel(item.get("channel", ""))
+        normalized_records.append(item)
+
+    return [Conversation(**record) for record in normalized_records]
 
 
 def dataset_stats(records: list[Conversation]) -> dict:
