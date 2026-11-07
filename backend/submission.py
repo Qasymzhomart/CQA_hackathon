@@ -209,9 +209,29 @@ def validate_submission_document(
             if criterion_id not in ALLOWED_VALUES:
                 continue
             value = criterion.get("value")
-            if value not in ALLOWED_VALUES[criterion_id]:
+            if criterion_id in {"contact", "empathy", "critical"}:
+                valid_type = type(value) is bool
+            elif criterion_id in {"discovery", "identification", "closure"}:
+                valid_type = value is None or type(value) is bool
+            elif criterion_id == "consultation":
+                valid_type = (
+                    value is None
+                    or (
+                        type(value) in {int, float}
+                        and type(value) is not bool
+                        and value in {0, 5, 10, 15, 20}
+                    )
+                )
+            else:  # dialogue
+                valid_type = (
+                    type(value) in {int, float}
+                    and type(value) is not bool
+                    and value in {0, 4, 7, 10}
+                )
+
+            if not valid_type:
                 errors.append(
-                    f"{cid}/{criterion_id}: invalid value {value!r}"
+                    f"{cid}/{criterion_id}: invalid value/type {value!r}"
                 )
             if not str(criterion.get("rationale", "")).strip():
                 errors.append(f"{cid}/{criterion_id}: rationale is required")
@@ -229,7 +249,11 @@ def validate_submission_document(
             errors.append(f"{cid}: score object is required")
         else:
             final_score = score.get("final_score")
-            if not isinstance(final_score, (int, float)) or not (0 <= final_score <= 100):
+            if (
+                type(final_score) not in {int, float}
+                or type(final_score) is bool
+                or not (0 <= final_score <= 100)
+            ):
                 errors.append(f"{cid}: final_score must be in 0..100")
 
             critical = next(
