@@ -8,7 +8,11 @@
       "weight": 10,
       "response_type": "binary",
       "allow_na": false,
-      "scale_max": 1
+      "scale_max": 1,
+      "allowed_values": [
+        0,
+        1
+      ]
     },
     {
       "id": "needs",
@@ -17,7 +21,11 @@
       "weight": 15,
       "response_type": "binary",
       "allow_na": true,
-      "scale_max": 1
+      "scale_max": 1,
+      "allowed_values": [
+        0,
+        1
+      ]
     },
     {
       "id": "identification",
@@ -26,7 +34,11 @@
       "weight": 20,
       "response_type": "binary",
       "allow_na": true,
-      "scale_max": 1
+      "scale_max": 1,
+      "allowed_values": [
+        0,
+        1
+      ]
     },
     {
       "id": "consultation",
@@ -35,7 +47,14 @@
       "weight": 20,
       "response_type": "scale",
       "allow_na": true,
-      "scale_max": 20
+      "scale_max": 20,
+      "allowed_values": [
+        0,
+        5,
+        10,
+        15,
+        20
+      ]
     },
     {
       "id": "empathy",
@@ -44,7 +63,11 @@
       "weight": 15,
       "response_type": "binary",
       "allow_na": false,
-      "scale_max": 1
+      "scale_max": 1,
+      "allowed_values": [
+        0,
+        1
+      ]
     },
     {
       "id": "dialog",
@@ -53,7 +76,13 @@
       "weight": 15,
       "response_type": "scale",
       "allow_na": false,
-      "scale_max": 10
+      "scale_max": 10,
+      "allowed_values": [
+        0,
+        4,
+        7,
+        10
+      ]
     },
     {
       "id": "closing",
@@ -62,7 +91,11 @@
       "weight": 5,
       "response_type": "binary",
       "allow_na": true,
-      "scale_max": 1
+      "scale_max": 1,
+      "allowed_values": [
+        0,
+        1
+      ]
     },
     {
       "id": "gross_errors",
@@ -71,7 +104,11 @@
       "weight": 0,
       "response_type": "flag",
       "allow_na": false,
-      "scale_max": 1
+      "scale_max": 1,
+      "allowed_values": [
+        0,
+        1
+      ]
     }
   ]
 }
