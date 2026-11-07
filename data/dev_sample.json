@@ -1,0 +1,70 @@
+{
+  "dataset_group_id": "DEV",
+  "total_records": 3,
+  "records": [
+    {
+      "conversation_id": "DEV-RU-001",
+      "channel": "agent_chat",
+      "language": "RU",
+      "transcript": [
+        {
+          "timestamp": "00:00:02",
+          "speaker": "client",
+          "text": "Здравствуйте, не могу найти отчет по счету."
+        },
+        {
+          "timestamp": "00:00:07",
+          "speaker": "agent",
+          "text": "Здравствуйте! Помогу разобраться. Уточните, пожалуйста, за какой период нужен отчет?"
+        },
+        {
+          "timestamp": "00:00:15",
+          "speaker": "client",
+          "text": "За октябрь."
+        },
+        {
+          "timestamp": "00:00:22",
+          "speaker": "agent",
+          "text": "Откройте раздел Отчеты, выберите октябрь и нажмите Скачать. Если пункта нет, напишите — проверим дальше."
+        }
+      ],
+      "audio_url": null
+    },
+    {
+      "conversation_id": "DEV-KZ-001",
+      "channel": "agent_chat",
+      "language": "KZ",
+      "transcript": [
+        {
+          "timestamp": "00:00:01",
+          "speaker": "client",
+          "text": "Сәлеметсіз бе, шот бойынша анықтама керек."
+        },
+        {
+          "timestamp": "00:00:05",
+          "speaker": "agent",
+          "text": "Сәлеметсіз бе! Қай кезеңге анықтама қажет екенін нақтылап жіберіңізші."
+        }
+      ],
+      "audio_url": null
+    },
+    {
+      "conversation_id": "DEV-EN-001",
+      "channel": "voice_call",
+      "language": "EN",
+      "transcript": [
+        {
+          "timestamp": "00:00:03",
+          "speaker": "client",
+          "text": "Hi, I need help with my account statement."
+        },
+        {
+          "timestamp": "00:00:08",
+          "speaker": "agent",
+          "text": "Hello! I can help with that. Which statement period do you need?"
+        }
+      ],
+      "audio_url": "https://example.com/dev-audio-placeholder.mp3"
+    }
+  ]
+}
