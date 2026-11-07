@@ -1,0 +1,77 @@
+{
+  "version": "v1",
+  "criteria": [
+    {
+      "id": "contact",
+      "name": "Установление контакта",
+      "description": "Приветствие, представление и корректное начало диалога.",
+      "weight": 10,
+      "response_type": "binary",
+      "allow_na": false,
+      "scale_max": 1
+    },
+    {
+      "id": "needs",
+      "name": "Выявление потребности",
+      "description": "Оператор уточняет запрос и понимает цель клиента.",
+      "weight": 15,
+      "response_type": "binary",
+      "allow_na": true,
+      "scale_max": 1
+    },
+    {
+      "id": "identification",
+      "name": "Идентификация",
+      "description": "Корректная идентификация клиента, когда она требуется сценарием.",
+      "weight": 20,
+      "response_type": "binary",
+      "allow_na": true,
+      "scale_max": 1
+    },
+    {
+      "id": "consultation",
+      "name": "Корректная и полная консультация",
+      "description": "Ответ точный, полный и соответствует запросу.",
+      "weight": 20,
+      "response_type": "binary",
+      "allow_na": false,
+      "scale_max": 1
+    },
+    {
+      "id": "empathy",
+      "name": "Эмпатия и клиентоориентированность",
+      "description": "Тон и формулировки учитывают ситуацию клиента.",
+      "weight": 15,
+      "response_type": "binary",
+      "allow_na": true,
+      "scale_max": 1
+    },
+    {
+      "id": "dialog",
+      "name": "Управление диалогом, скорость и грамотность",
+      "description": "Логичность, понятность, грамотность и управление ходом разговора.",
+      "weight": 15,
+      "response_type": "binary",
+      "allow_na": false,
+      "scale_max": 1
+    },
+    {
+      "id": "closing",
+      "name": "Завершение",
+      "description": "Корректное завершение и проверка, что вопрос клиента решен.",
+      "weight": 5,
+      "response_type": "binary",
+      "allow_na": true,
+      "scale_max": 1
+    },
+    {
+      "id": "gross_errors",
+      "name": "Грубые ошибки",
+      "description": "Отдельный флаг критических нарушений. Не входит в весовую сумму.",
+      "weight": 0,
+      "response_type": "flag",
+      "allow_na": false,
+      "scale_max": 1
+    }
+  ]
+}
