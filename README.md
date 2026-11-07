@@ -233,3 +233,84 @@ score ranges and evidence message IDs, retries once on an invalid model result,
 then passes the validated criterion results to backend weighted scoring.
 
 `POST /api/evaluate/{conversation_id}` remains a demo-only heuristic fallback.
+
+
+## Official submission files
+
+The organizers require exactly:
+
+```text
+results/
+  dev/
+    results.json
+  prod/
+    results.json
+```
+
+### Generate DEV submission
+
+After importing the 65 DEV conversations:
+
+```powershell
+$env:CQA_TEAM_NAME="YOUR TEAM NAME"
+python scripts/generate_submission.py --set dev
+```
+
+The script:
+- evaluates all 65 conversations;
+- resumes from `data/submission_dev_progress.json` if interrupted;
+- respects Gemini free-tier rate limits;
+- converts internal IDs to the official IDs:
+  `contact, discovery, identification, consultation, empathy, dialogue, closure, critical`;
+- converts evidence message IDs to 1-based `evidence_turns`;
+- calculates final score with backend N/A redistribution;
+- writes `results/dev/results.json`;
+- validates the final schema before success.
+
+Independent validation:
+
+```powershell
+python scripts/validate_submission.py results/dev/results.json --expected 65
+```
+
+### PROD / control submission
+
+When the organizers provide the control group ID:
+
+```powershell
+python scripts/import_dataset.py --group-id CONTROL_ID
+```
+
+If the organizers replace a criterion, change it in the UI and save it. Then export
+the currently active checklist from the running backend:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8000/api/checklist |
+  ConvertTo-Json -Depth 100 |
+  Set-Content data/prod_checklist.json -Encoding UTF8
+```
+
+Generate PROD with the control dataset and active checklist:
+
+```powershell
+python scripts/generate_submission.py --set prod `
+  --dataset data/control_id_dataset.json `
+  --checklist data/prod_checklist.json
+```
+
+Validate:
+
+```powershell
+python scripts/validate_submission.py results/prod/results.json --expected 10
+```
+
+Before the stop-code, commit and push both final files:
+
+```powershell
+git add results/dev/results.json results/prod/results.json
+git commit -m "Add final CQA submission results"
+git push
+```
+
+Do not commit Gemini keys, organizer signed URLs, raw organizer datasets or local
+progress files.
