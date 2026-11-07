@@ -1,0 +1,2 @@
+conversation_id,criterion_id,human_score,ai_score,human_evidence,ai_evidence,human_applicable,ai_applicable,error_type
+p1-ru-001,greeting,1,1,M1,M1,true,true,
