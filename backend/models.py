@@ -10,6 +10,7 @@ class Utterance(BaseModel):
     timestamp: str
     speaker: str
     text: str
+    message_id: Optional[str] = None
 
 
 class Conversation(BaseModel):
@@ -35,7 +36,10 @@ class CriterionResult(BaseModel):
     answer: str
     raw_score: float = Field(ge=0)
     explanation: str
-    evidence: list[str] = []
+    evidence: list[str] = Field(default_factory=list)
+    evidence_ids: list[str] = Field(default_factory=list)
+    checked_message_ids: list[str] = Field(default_factory=list)
+    critical_error: bool = False
     na: bool = False
     na_reason: Optional[str] = None
 
