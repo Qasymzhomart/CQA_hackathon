@@ -160,12 +160,12 @@ The frontend uses `http://localhost:8000` as its API URL. To point at a deployed
 
 ### Demo walkthrough (under five minutes)
 1. Click **Загрузить демо** to import three *synthetic* sample conversations (RU, KZ, EN). The app intentionally does not bundle the real organizer records.
-2. Open a conversation and press **Запустить оценку**; the backend returns weighted score, criteria, explanations, N/A and evidence.
+2. Open a conversation and press **Запустить оценку**; the frontend calls the Gemini AI endpoint and the backend returns weighted score, criteria, explanations, N/A and evidence.
 3. Click an evidence reference (M1, M2, …) to scroll and highlight the exact transcript message.
 4. Appeal a criterion and visit **Апелляции** to confirm or change its score, entering a reviewer reason. The backend recalculates the final score.
 5. Under **Чек-лист**, change a criterion weight/type/name or add one; maintain **100%** total weights and save. Re-evaluate the conversation.
 
-**Limitations:** The automatic evaluator is an explicitly labelled **demo heuristic**, not a trained AI model. It must not be used as a reliable production quality audit. The evaluator does not fully understand language/intent, and newly added criteria default to a conservative failed heuristic until a corresponding rule or AI evaluator is implemented. FastAPI currently keeps conversations, evaluations, appeals and checklist edits **in process memory**; restart clears them. The user may re-import demo or organizer JSON after restart. Real organizer's 65 conversations are **not** bundled. The Voice Call demo has no real audio link.
+**Limitations:** The main frontend evaluation flow uses the Gemini AI endpoint and is still a hackathon prototype, not a production quality-audit system. The separate `/api/evaluate/{conversation_id}` endpoint remains a demo heuristic fallback. FastAPI currently keeps conversations, evaluations, appeals and checklist edits **in process memory**; restart clears them. The user may re-import demo or organizer JSON after restart. Real organizer's 65 conversations are **not** bundled. The Voice Call demo has no real audio link.
 
 ### New endpoints
 - `POST /api/evaluate/{conversation_id}`: create heuristic evaluation.
