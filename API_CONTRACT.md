@@ -60,7 +60,7 @@ The backend calculates the final weighted score. The frontend should not calcula
 
 `POST /api/ai/evaluate/{conversation_id}`
 
-Runs the AI/Analytics pipeline:
+Runs the Gemini-powered AI/Analytics pipeline:
 
 1. dynamic checklist + transcript with message IDs;
 2. structured LLM output;
