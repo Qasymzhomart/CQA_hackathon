@@ -48,6 +48,9 @@ def validate_ai_evaluation(
         response_type = criterion.get("response_type", criterion.get("answer_type", "binary"))
         max_score = float(criterion.get("scale_max", criterion.get("max_score", 1)))
         min_score = float(criterion.get("min_score", 0))
+        allowed_values = criterion.get("allowed_values")
+        if allowed_values is None and response_type in ("binary", "boolean", "flag"):
+            allowed_values = [0, 1]
 
         if not item.reason.strip():
             errors.append(f"{item.criterion_id}: reason is empty")
@@ -84,7 +87,9 @@ def validate_ai_evaluation(
             errors.append(
                 f"{item.criterion_id}: score {item.score} outside {min_score}..{max_score}"
             )
-        if response_type in ("binary", "boolean") and item.score not in (0, 1):
-            errors.append(f"{item.criterion_id}: binary score must be 0 or 1")
+        if allowed_values is not None and item.score not in allowed_values:
+            errors.append(
+                f"{item.criterion_id}: score {item.score} must be one of {allowed_values}"
+            )
 
     return errors
