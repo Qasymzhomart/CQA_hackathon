@@ -317,5 +317,5 @@ def ai_evaluate(conversation_id: str):
         # Avoid exposing secrets or provider internals to the frontend.
         raise HTTPException(
             status_code=503,
-            detail="AI evaluation unavailable. Check OPENAI_API_KEY/model configuration.",
+            detail="AI evaluation unavailable. Check GEMINI_API_KEY/CQA_AI_MODEL configuration.",
         ) from exc
