@@ -6,3 +6,9 @@ venv/
 .env
 .idea/
 .vscode/
+
+# Organizer datasets / local AI progress should stay local.
+data/*_dataset.json
+data/ai_batch_results.json
+data/submission_*_progress.json
+data/prod_checklist.json
