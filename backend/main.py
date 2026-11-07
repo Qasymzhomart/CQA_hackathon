@@ -4,6 +4,7 @@ from copy import deepcopy
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 
 from .models import (
     AppealRequest,
@@ -16,6 +17,14 @@ from .scoring import calculate_weighted_score
 
 
 app = FastAPI(title="CQA Hackathon API", version="0.1.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 CHECKLIST_VERSION = "v1"
 CHECKLIST = [
