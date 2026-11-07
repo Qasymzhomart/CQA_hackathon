@@ -6,7 +6,8 @@ import time
 from dataclasses import dataclass
 from typing import Any
 
-from openai import OpenAI
+from google import genai
+from google.genai import types
 
 from . import DEFAULT_MODEL, PROMPT_VERSION
 from .cost import estimate_cost_usd
@@ -25,28 +26,35 @@ class EvaluationRun:
 
 
 def _call_model(
-    client: OpenAI,
+    client: Any,
     model: str,
     system_prompt: str,
     task: str,
 ) -> tuple[AIEvaluation, int, int]:
-    completion = client.chat.completions.parse(
+    response = client.models.generate_content(
         model=model,
-        temperature=0.1,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": task},
-        ],
-        response_format=AIEvaluation,
+        contents=task,
+        config=types.GenerateContentConfig(
+            system_instruction=system_prompt,
+            temperature=0.1,
+            response_mime_type="application/json",
+            response_schema=AIEvaluation,
+        ),
     )
-    message = completion.choices[0].message
-    if message.parsed is None:
-        raise ValueError("Model did not return a parseable structured evaluation")
 
-    usage = completion.usage
-    input_tokens = int(getattr(usage, "prompt_tokens", 0) or 0)
-    output_tokens = int(getattr(usage, "completion_tokens", 0) or 0)
-    return message.parsed, input_tokens, output_tokens
+    parsed = response.parsed
+    if parsed is None:
+        raise ValueError("Gemini did not return a parseable structured evaluation")
+
+    if isinstance(parsed, AIEvaluation):
+        evaluation = parsed
+    else:
+        evaluation = AIEvaluation.model_validate(parsed)
+
+    usage = getattr(response, "usage_metadata", None)
+    input_tokens = int(getattr(usage, "prompt_token_count", 0) or 0)
+    output_tokens = int(getattr(usage, "candidates_token_count", 0) or 0)
+    return evaluation, input_tokens, output_tokens
 
 
 def evaluate_conversation(
@@ -54,11 +62,16 @@ def evaluate_conversation(
     criteria: list[dict[str, Any]],
     *,
     model: str | None = None,
-    client: OpenAI | None = None,
+    client: Any | None = None,
 ) -> EvaluationRun:
-    """Run one structured CQA evaluation with at most one validation retry."""
+    """Run one Gemini structured CQA evaluation with one validation retry."""
     model = model or os.getenv("CQA_AI_MODEL", DEFAULT_MODEL)
-    client = client or OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+    if client is None:
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            raise RuntimeError("GEMINI_API_KEY is not set")
+        client = genai.Client(api_key=api_key)
 
     task = build_task(conversation, criteria)
     start = time.perf_counter()
