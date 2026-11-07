@@ -137,3 +137,41 @@ Total scored weight: **100%**.
 6. Submit an appeal with a comment.
 7. Reviewer confirms or changes the criterion score.
 8. Backend recalculates and returns the final result.
+
+
+## Frontend (added for the hackathon)
+
+Frontend is a plain HTML/CSS/JavaScript app under `frontend/`, compatible with embedding in a Dynamics 365 HTML component after adjusting the API base URL.
+
+Start backend (terminal 1):
+```bash
+pip install -r requirements.txt
+uvicorn backend.main:app --reload --port 8000
+```
+
+Start frontend (terminal 2):
+```bash
+python -m http.server 5500 --directory frontend
+```
+
+Open **http://localhost:5500**.
+
+The frontend uses `http://localhost:8000` as its API URL. To point at a deployed backend, run `localStorage.setItem("cqa_api_base", "https://YOUR-API-HOST")` in the browser console and reload. For production replace permissive CORS with a specific trusted origin.
+
+### Demo walkthrough (under five minutes)
+1. Click **Загрузить демо** to import three *synthetic* sample conversations (RU, KZ, EN). The app intentionally does not bundle the real organizer records.
+2. Open a conversation and press **Запустить оценку**; the backend returns weighted score, criteria, explanations, N/A and evidence.
+3. Click an evidence reference (M1, M2, …) to scroll and highlight the exact transcript message.
+4. Appeal a criterion and visit **Апелляции** to confirm or change its score, entering a reviewer reason. The backend recalculates the final score.
+5. Under **Чек-лист**, change a criterion weight/type/name or add one; maintain **100%** total weights and save. Re-evaluate the conversation.
+
+**Limitations:** The automatic evaluator is an explicitly labelled **demo heuristic**, not a trained AI model. It must not be used as a reliable production quality audit. The evaluator does not fully understand language/intent, and newly added criteria default to a conservative failed heuristic until a corresponding rule or AI evaluator is implemented. FastAPI currently keeps conversations, evaluations, appeals and checklist edits **in process memory**; restart clears them. The user may re-import demo or organizer JSON after restart. Real organizer's 65 conversations are **not** bundled. The Voice Call demo has no real audio link.
+
+### New endpoints
+- `POST /api/evaluate/{conversation_id}`: create heuristic evaluation.
+- `GET /api/evaluations`: list evaluation records.
+- `GET /api/appeals`: list appeals.
+- `POST /api/appeals`: body includes `evaluation_id`, `criterion_id` and `comment`.
+- `POST /api/reviews`: body includes `evaluation_id`, `criterion_id`, `confirmed_score`, `reviewer_comment`.
+
+Security: no account login is needed for the demo, as specified in the task. Do not expose the reviewer endpoints or permissive CORS publicly without adding authorization.
