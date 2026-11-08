@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from copy import deepcopy
+import json
+from pathlib import Path
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException
@@ -91,6 +93,146 @@ def import_conversations(records: list[Conversation]):
         CONVERSATIONS[item.conversation_id] = item
     return {
         "imported": len(records),
+        "total": len(CONVERSATIONS),
+    }
+
+
+OFFICIAL_TO_INTERNAL = {
+    "contact": "contact",
+    "discovery": "needs",
+    "identification": "identification",
+    "consultation": "consultation",
+    "empathy": "empathy",
+    "dialogue": "dialog",
+    "closure": "closing",
+    "critical": "gross_errors",
+}
+
+
+def _submission_result_to_evaluation(
+    submission_result: dict,
+    conversation: Conversation,
+) -> dict | None:
+    if submission_result.get("status") != "ok":
+        return None
+
+    transcript = conversation.transcript
+    typed_results: list[CriterionResult] = []
+
+    for item in submission_result.get("criteria", []):
+        internal_id = OFFICIAL_TO_INTERNAL.get(item.get("criterion_id"))
+        if not internal_id:
+            continue
+
+        value = item.get("value")
+        na = value is None
+        if isinstance(value, bool):
+            raw_score = 1.0 if value else 0.0
+            answer = "YES" if value else "NO"
+        elif value is None:
+            raw_score = 0.0
+            answer = "N/A"
+        else:
+            raw_score = float(value)
+            answer = str(value)
+
+        turns = [
+            int(turn)
+            for turn in item.get("evidence_turns", [])
+            if isinstance(turn, int) and 1 <= turn <= len(transcript)
+        ]
+        evidence_ids = [f"M{turn}" for turn in turns]
+        evidence = [
+            f"M{turn}: {transcript[turn - 1].text}"
+            for turn in turns
+        ]
+
+        typed_results.append(
+            CriterionResult(
+                criterion_id=internal_id,
+                answer=answer,
+                raw_score=raw_score,
+                explanation=str(item.get("rationale", "")),
+                evidence=evidence,
+                evidence_ids=evidence_ids,
+                checked_message_ids=evidence_ids,
+                critical_error=(
+                    item.get("criterion_id") == "critical" and value is True
+                ),
+                na=na,
+                na_reason=str(item.get("rationale", "")) if na else None,
+            )
+        )
+
+    if len(typed_results) != len(CHECKLIST):
+        return None
+
+    calculation = calculate_weighted_score(CHECKLIST, typed_results)
+    evaluation_id = str(uuid4())
+    official_score = submission_result.get("score") or {}
+
+    return {
+        "evaluation_id": evaluation_id,
+        "conversation_id": conversation.conversation_id,
+        "checklist_version": CHECKLIST_VERSION,
+        "results": [x.model_dump() for x in typed_results],
+        "criteria": calculation["criteria"],
+        "gross_errors": calculation["gross_errors"],
+        "final_score": float(
+            official_score.get("final_score", calculation["final_score"])
+        ),
+        "status": "evaluated",
+        "assessment_method": "precomputed_submission",
+        "model": "gemini-3.5-flash-lite",
+    }
+
+
+@app.post("/api/demo/load-dev")
+def load_dev_demo():
+    root = Path(__file__).resolve().parents[1]
+    dataset_path = root / "data" / "dev_dataset.json"
+
+    if not dataset_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "data/dev_dataset.json not found. Run "
+                "python scripts/import_dataset.py --group-id DEV first."
+            ),
+        )
+
+    payload = json.loads(dataset_path.read_text(encoding="utf-8-sig"))
+    records = payload.get("records")
+    if not isinstance(records, list):
+        raise HTTPException(
+            status_code=422,
+            detail="DEV dataset does not contain records array.",
+        )
+
+    imported = 0
+    for raw in records:
+        item = Conversation(**raw)
+        CONVERSATIONS[item.conversation_id] = item
+        imported += 1
+
+    results_path = root / "results" / "dev" / "results.json"
+    loaded_evaluations = 0
+
+    if results_path.exists():
+        submission = json.loads(results_path.read_text(encoding="utf-8-sig"))
+        for result in submission.get("results", []):
+            conversation = CONVERSATIONS.get(result.get("conversation_id"))
+            if conversation is None:
+                continue
+            record = _submission_result_to_evaluation(result, conversation)
+            if record is None:
+                continue
+            EVALUATIONS[record["evaluation_id"]] = record
+            loaded_evaluations += 1
+
+    return {
+        "imported": imported,
+        "evaluations_loaded": loaded_evaluations,
         "total": len(CONVERSATIONS),
     }
 
