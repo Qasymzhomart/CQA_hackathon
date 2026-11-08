@@ -314,3 +314,17 @@ git push
 
 Do not commit Gemini keys, organizer signed URLs, raw organizer datasets or local
 progress files.
+
+
+## Freedom dark dashboard UI (November 2026)
+
+The `frontend/` interface has been redesigned to closely follow the supplied dark Freedom CQA dashboard reference. The update includes a persistent left navigation sidebar, global search (Ctrl/Cmd+K), dark blue-green theme, live KPI cards, score-trend SVG chart, language donut, conversation table, and a right-side dialogue / evaluation preview.
+
+- All dashboard counts, scores, chart values, and previews come from the existing backend API. No screenshot sample values are hardcoded as real data.
+- Use the **DEV 65 жүктеу** button when the backend has the DEV dataset configured, or use **JSON импорттау**.
+- Click a dialogue row or the preview expansion arrow to inspect the transcript, evaluation, evidence, appeal, reviewer decision, and checklist editor.
+- The original working forms and API routes remain connected.
+- The decorative laptop in the heading is built with HTML/CSS; no external image CDN or external icon package is required.
+- Layout is responsive and includes mobile sidebar navigation.
+
+To run, start the FastAPI backend on port 8000 and serve `frontend/` on port 5500 as described above. The dashboard does not fabricate or claim any particular accuracy metric; all visible numbers are computed from records loaded into the backend.
