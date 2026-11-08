@@ -196,13 +196,13 @@ Open **http://localhost:5500**.
 The frontend uses `http://localhost:8000` as its API URL. To point at a deployed backend, run `localStorage.setItem("cqa_api_base", "https://YOUR-API-HOST")` in the browser console and reload. For production replace permissive CORS with a specific trusted origin.
 
 ### Demo walkthrough (under five minutes)
-1. Click **Загрузить демо** to import three *synthetic* sample conversations (RU, KZ, EN). The app intentionally does not bundle the real organizer records.
-2. Open a conversation and press **Запустить оценку**; the frontend calls the Gemini AI endpoint and the backend returns weighted score, criteria, explanations, N/A and evidence.
+1. Import the organizer DEV dataset locally with `python scripts/import_dataset.py --group-id DEV`, then click **Загрузить DEV 65**. The dashboard loads all 65 DEV conversations and, when `results/dev/results.json` is present, also loads the precomputed Gemini scores.
+2. Open any conversation. Existing DEV scores can be inspected immediately; press **Запустить оценку** to run a fresh live Gemini evaluation for that conversation.
 3. Click an evidence reference (M1, M2, …) to scroll and highlight the exact transcript message.
 4. Appeal a criterion and visit **Апелляции** to confirm or change its score, entering a reviewer reason. The backend recalculates the final score.
 5. Under **Чек-лист**, change a criterion weight/type/name or add one; maintain **100%** total weights and save. Re-evaluate the conversation.
 
-**Limitations:** The main frontend evaluation flow uses the Gemini AI endpoint and is still a hackathon prototype, not a production quality-audit system. The separate `/api/evaluate/{conversation_id}` endpoint remains a demo heuristic fallback. FastAPI currently keeps conversations, evaluations, appeals and checklist edits **in process memory**; restart clears them. The user may re-import demo or organizer JSON after restart. Real organizer's 65 conversations are **not** bundled. The Voice Call demo has no real audio link.
+**Limitations:** The main frontend evaluation flow uses the Gemini AI endpoint and is still a hackathon prototype, not a production quality-audit system. The separate `/api/evaluate/{conversation_id}` endpoint remains a demo heuristic fallback. FastAPI currently keeps conversations, evaluations, appeals and checklist edits **in process memory**; restart clears them. The organizer DEV dataset is intentionally not committed to Git and must be imported locally before clicking **Загрузить DEV 65**.
 
 ### New endpoints
 - `POST /api/evaluate/{conversation_id}`: create heuristic evaluation.
