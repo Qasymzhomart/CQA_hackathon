@@ -13,23 +13,83 @@ const notify=(message,error=false)=>{const n=$("#alert");n.textContent=message;n
 const view=name=>{document.querySelectorAll(".page").forEach(x=>x.classList.toggle("active",x.id===name));document.querySelectorAll(".nav").forEach(x=>x.classList.toggle("active",x.dataset.view===name));window.scrollTo({top:0,behavior:"smooth"});if(name==="reviews")loadReviews();if(name==="checklist")loadChecklist()};
 const statusLabel=s=>({"not evaluated":"Не оценен",evaluated:"Оценен",appealed:"Апелляция",reviewed:"Проверен"}[s]||s);
 const criterionById=id=>state.checklist.find(c=>c.id===id)||{id,name:id,weight:0,scale_max:1,response_type:"binary"};
-const langChannel=c=>c.channel==="voice_call"?"Звонок":"Чат";
+const langChannel=c=>c.channel==="voice_call"?"Қоңырау":"Чат";
+let previewId=null;
 async function initialize(){
  try{const [cs,es,cl]=await Promise.all([api("/api/conversations"),api("/api/evaluations"),api("/api/checklist")]);state.conversations=cs;state.checklist=cl.criteria;state.evaluations={};for(const e of es)state.evaluations[e.conversation_id]=e;renderDashboard()}catch(e){notify("Не удалось подключиться к backend: "+e.message,true);renderDashboard()}
 }
 function renderDashboard(){
- const cs=state.conversations;
- const filt=cs.filter(c=>(!$("#search").value||c.conversation_id.toLowerCase().includes($("#search").value.toLowerCase()))&&(!$("#lang").value||c.language===$("#lang").value)&&(!$("#channel").value||c.channel===$("#channel").value)&&(!$("#status").value||((state.evaluations[c.conversation_id]?.status)||"not evaluated")===$("#status").value));
- const evals=Object.values(state.evaluations);
- $("#stats").innerHTML=[["Всего диалогов",cs.length],["Оценено",evals.length],["Средний балл",evals.length?(evals.reduce((a,e)=>a+Number(e.final_score||0),0)/evals.length).toFixed(1):"—"],["Апелляции",evals.filter(x=>x.status==="appealed").length]].map(([k,v])=>'<div class="stat"><strong>'+esc(v)+'</strong><span>'+esc(k)+'</span></div>').join("");
- $("#conversationRows").innerHTML=filt.map(c=>{const e=state.evaluations[c.conversation_id],status=e?.status||"not evaluated";return '<tr><td>'+esc(c.conversation_id)+'</td><td><span class="tag">'+esc(c.language)+'</span></td><td>'+esc(langChannel(c))+'</td><td><strong>'+(e?esc(e.final_score)+" / 100":"—")+'</strong></td><td><span class="tag '+(status==="appealed"?"warn":status==="not evaluated"?"gray":"")+'">'+statusLabel(status)+'</span></td><td><button class="btn small secondary" data-open="'+esc(c.conversation_id)+'">Открыть →</button></td></tr>'}).join("")||'<tr><td colspan="6" class="empty">Диалогов нет. Загрузите демо или импортируйте JSON.</td></tr>';
+ const cs=state.conversations, evals=Object.values(state.evaluations);
+ const mean=evals.length?evals.reduce((a,e)=>a+Number(e.final_score||0),0)/evals.length:null;
+ const issueCount=evals.filter(x=>(x.gross_errors||[]).length>0).length;
+ const inspected=evals.filter(x=>x.status==="reviewed"||x.status==="evaluated").length;
+ const statList=[
+  ["Барлық диалогтар",cs.length,"message","green","Деректер жиыны"],
+  ["Орташа баға",mean===null?"—":Math.round(mean)+" /100","star","green",evals.length+" бағалау"],
+  ["Сапа стандарты",evals.length?Math.round(evals.filter(x=>Number(x.final_score)>=80).length/evals.length*100)+"%":"—","check","green",evals.length?"≥80 балл":"Бағалау жоқ"],
+  ["Анықталған қателер",issueCount,"alert","red",inspected+" тексерілген"]
+ ];
+ const icons={
+ message:'<path d="M4 5h16v12H9l-5 4zM8 10h8M8 13h6"/>',
+ star:'<path d="m12 2 3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z"/>',
+ check:'<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>',
+ alert:'<path d="m12 3 10 18H2zM12 9v5M12 17h.01"/>'
+ };
+ $("#stats").innerHTML=statList.map(([label,value,icon,kind,foot])=>'<div class="stat"><div class="stat-top"><span class="stat-icon '+kind+'"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+icons[icon]+'</svg></span><span>'+esc(label)+'</span></div><div><strong>'+esc(value)+'</strong><div class="trend '+(kind==="red"?"negative":"")+'">'+esc(foot)+'</div></div></div>').join("");
+ const filt=cs.filter(c=>(!$("#search").value||c.conversation_id.toLowerCase().includes($("#search").value.toLowerCase()))&&(!$("#lang").value||c.language===$("#lang").value)&&(!$("#channel").value||c.channel===$("#channel").value)&&(!$("#status").value||(state.evaluations[c.conversation_id]?.status||"not evaluated")===$("#status").value));
+ $("#conversationRows").innerHTML=filt.map(c=>{
+  const e=state.evaluations[c.conversation_id],status=e?.status||"not evaluated";
+  const score=e?Number(e.final_score):null;
+  const band=score===null?"":score>=80?"score-good":score>=60?"score-mid":"score-low";
+  const label=score===null?"Бағаланбаған":score>=90?"Өте жақсы":score>=80?"Жақсы":score>=60?"Қанағаттанарлық":"Жақсарту қажет";
+  const tagClass=score===null?"gray":score>=80?"":score>=60?"warn":"danger";
+  const name=c.operator_name||c.operator||"—";
+  return '<tr><td>'+esc(c.conversation_id)+'</td><td><span class="tag lang-tag '+esc(c.language)+'">'+esc(c.language)+'</span></td><td>'+esc(c.channel==="voice_call"?"◉ Қоңырау":"▣ Чат")+'</td><td>'+esc(name)+'</td><td><span class="'+band+'">'+(score===null?"—":esc(Math.round(score))+'<small style="color:#b9cede;font-size:10px">/100</small>')+'</span></td><td><span class="tag '+tagClass+'">'+esc(label)+'</span></td><td><button class="btn secondary small" data-open="'+esc(c.conversation_id)+'" aria-label="Ашу '+esc(c.conversation_id)+'">◉</button></td></tr>'
+ }).join("")||'<tr><td colspan="7" class="empty">Диалогтар табылмады. DEV деректерін жүктеңіз немесе JSON импорттаңыз.</td></tr>';
  document.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>openConversation(b.dataset.open));
+ renderQualityChart(evals);renderLanguageChart(cs);renderPreview();
+ const badge=$("#appealsBadge");if(badge){const count=evals.filter(e=>e.status==="appealed").length;badge.textContent=count;badge.hidden=!count}
+}
+function renderQualityChart(evals){
+ const target=$("#qualityChart");if(!target)return;
+ const series=evals.slice(-7).map(e=>Number(e.final_score||0));
+ if(!series.length){target.innerHTML='<div class="preview-empty">График бағалаудан кейін пайда болады</div>';return}
+ const width=440,height=155,left=37,right=9,top=10,bottom=26;const minY=0,maxY=100;
+ const x=i=>left+(series.length===1?(width-left-right)/2:i*(width-left-right)/(series.length-1));
+ const y=v=>top+(maxY-v)/(maxY-minY)*(height-top-bottom);
+ const points=series.map((v,i)=>[x(i),y(v)]);
+ const path=points.map(([px,py],i)=>(i?"L":"M")+px.toFixed(1)+","+py.toFixed(1)).join(" ");
+ const area=path+" L"+points[points.length-1][0].toFixed(1)+","+(height-bottom)+" L"+points[0][0].toFixed(1)+","+(height-bottom)+" Z";
+ const grid=[0,25,50,75,100].map(v=>'<line class="chart-gridline" x1="'+left+'" x2="'+(width-right)+'" y1="'+y(v)+'" y2="'+y(v)+'"/><text class="chart-label" x="5" y="'+(y(v)+4)+'">'+v+'</text>').join("");
+ const dots=points.map(([px,py],i)=>'<circle cx="'+px+'" cy="'+py+'" r="4" fill="#2fe99a" stroke="#103b34" stroke-width="2"/><text class="chart-label" x="'+px+'" y="152" text-anchor="middle">'+(i+1)+'</text>').join("");
+ target.innerHTML='<svg viewBox="0 0 440 160" role="img" aria-label="Соңғы '+series.length+' бағалаудың динамикасы"><defs><linearGradient id="chartFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#00cf79" stop-opacity=".35"/><stop offset="1" stop-color="#00cf79" stop-opacity="0"/></linearGradient></defs>'+grid+'<path d="'+area+'" fill="url(#chartFill)"/><path d="'+path+'" fill="none" stroke="#29eb93" stroke-width="2.6" stroke-linejoin="round"/>'+dots+'</svg>'
+}
+function renderLanguageChart(cs){
+ const target=$("#languageChart");if(!target)return;
+ const total=cs.length,langs=["RU","KZ","EN"],colors=["#1ce58c","#20b0f4","#a889fe"];
+ const counts=langs.map(l=>cs.filter(c=>c.language===l).length);
+ let offset=0;const segments=counts.map((count,i)=>{const start=offset;offset+=total?count/total*100:0;return colors[i]+" "+start+"% "+offset+"%"}).filter((_,i)=>counts[i]>0);
+ target.innerHTML='<div class="donut" style="background:'+(segments.length?'conic-gradient('+segments.join(",")+')':'#1a3649')+'"><div class="donut-hole"><b>'+total+'</b><span>диалог</span></div></div><div class="legend">'+langs.map((l,i)=>'<div class="legend-row"><span class="legend-dot" style="background:'+colors[i]+'"></span><span>'+l+' – '+counts[i]+' ('+(total?Math.round(counts[i]/total*100):0)+'%)</span></div>').join("")+'</div>'
+}
+function renderPreview(){
+ const cs=state.conversations, selected=cs.find(c=>c.conversation_id===previewId)||cs.find(c=>state.evaluations[c.conversation_id])||cs[0];
+ const body=$("#previewConversation");if(!body)return;
+ if(!selected){$("#previewId").textContent="—";$("#previewScore").textContent="— / 100";body.innerHTML='<div class="preview-empty">Деректерді жүктеген соң мұнда диалог көрсетіледі.</div>';$("#previewRating").innerHTML='<div class="preview-empty">Бағалау әлі жоқ</div>';return}
+ previewId=selected.conversation_id;$("#previewId").textContent=selected.conversation_id;
+ const e=state.evaluations[selected.conversation_id];
+ const tab=document.querySelector(".preview-tabs button.active")?.dataset.previewTab||"dialog";
+ if(tab==="dialog"){body.innerHTML=(selected.transcript||[]).slice(0,5).map(m=>'<div class="preview-line '+(m.speaker==="operator"||m.speaker==="agent"?"operator":"client")+'"><div class="preview-meta">'+esc(m.speaker==="operator"||m.speaker==="agent"?"Оператор":m.speaker==="client"?"Клиент":m.speaker)+' · '+esc(m.timestamp)+'</div><div class="preview-bubble">'+esc(m.text)+'</div></div>').join("")||'<div class="preview-empty">Транскрипт бос</div>'}
+ else if(tab==="score"){body.innerHTML=e?(e.results||[]).slice(0,5).map(r=>'<div class="preview-bubble" style="margin:7px 0">'+esc(criterionById(r.criterion_id).name)+': '+esc(r.na?"N/A":r.raw_score)+'</div>').join(""):'<div class="preview-empty">Бұл диалог әлі бағаланбаған</div>'}
+ else{body.innerHTML=e?'<div class="preview-bubble">Әр критерийдің түсіндірмесін және дәлелдерін көру үшін диалогты толық ашыңыз. AI қорытындысын қолмен тексеріңіз.</div>':'<div class="preview-empty">Ұсыныстар бағалау жасалғаннан кейін қолжетімді болады</div>'}
+ $("#previewScore").textContent=e?Math.round(Number(e.final_score))+" / 100":"— / 100";
+ const rows=e?.results||[];const details=e?.criteria||[];
+ $("#previewRating").innerHTML=e?'<div class="rating-summary">Жалпы нәтиже: <span class="tag '+(e.final_score<60?"danger":e.final_score<80?"warn":"")+'">'+(e.final_score>=90?"Өте жақсы":e.final_score>=80?"Жақсы":e.final_score>=60?"Қанағаттанарлық":"Жақсарту қажет")+'</span></div>'+rows.filter(r=>criterionById(r.criterion_id).response_type!=="flag").map(r=>{const c=criterionById(r.criterion_id),max=c.scale_max||1,percent=r.na?0:Math.max(0,Math.min(100,100*Number(r.raw_score)/max));return '<div class="rating-row"><span title="'+esc(c.name)+'">'+esc(c.name)+'</span><div class="rating-meter"><i style="width:'+percent+'%"></i></div><b>'+(r.na?"N/A":esc(r.raw_score)+" / "+esc(max))+'</b></div>'}).join("")+'<div class="rating-conclusion">✓ <strong>Қорытынды:</strong> '+(e.gross_errors?.length?'Критикалық қателер анықталған.':'Бағалау нәтижелері мен дәлелдерін толық диалог карточкасынан қараңыз.')+'</div>':'<div class="preview-empty">AI бағалауы басталмаған. Диалогты ашып, бағалауды іске қосыңыз.</div>'
 }
 async function openConversation(id){
  try{const c=await api("/api/conversations/"+encodeURIComponent(id));state.current=c;$("#conversationTitle").textContent=c.conversation_id;$("#conversationMeta").textContent=c.language+" · "+langChannel(c);$("#messageCount").textContent=c.transcript.length+" сообщений";
  $("#messages").innerHTML=c.transcript.map((m,i)=>'<div class="message '+esc(m.speaker.toLowerCase()==="agent"?"operator":m.speaker.toLowerCase())+'" id="message-M'+(i+1)+'"><div class="msghead"><span>M'+(i+1)+' · '+esc(m.speaker.toUpperCase())+'</span><span>'+esc(m.timestamp)+'</span></div><p>'+esc(m.text)+'</p></div>').join("");
  $("#audioBlock").innerHTML=c.audio_url&&/^https?:\/\//.test(c.audio_url)?'<p><a href="'+esc(c.audio_url)+'" target="_blank" rel="noopener noreferrer">Открыть запись звонка ↗</a></p><audio controls src="'+esc(c.audio_url)+'"></audio>':"";
- view("conversation");renderEvaluation(state.evaluations[id]);
+ previewId=id;view("conversation");renderEvaluation(state.evaluations[id]);
  }catch(e){notify("Не удалось открыть: "+e.message,true)}
 }
 function jumpEvidence(text){
@@ -109,3 +169,15 @@ $("#importBtn").onclick=()=>$("#jsonFile").click();
 $("#jsonFile").onchange=async e=>{const file=e.target.files[0];if(!file)return;try{const obj=JSON.parse(await file.text());const records=Array.isArray(obj)?obj:obj.data?.records||obj.records;if(!Array.isArray(records))throw Error("Ожидается JSON-массив или data.records");await importRecords(records)}catch(err){notify("Импорт не удался: "+err.message,true)}finally{e.target.value=""}};
 $("#appealCancel").onclick=()=>$("#appealModal").close();$("#appealForm").onsubmit=submitAppeal;
 initialize();
+
+document.querySelectorAll("[data-preview-tab]").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll("[data-preview-tab]").forEach(x=>x.classList.toggle("active",x===b));renderPreview()}));
+$("#expandPreview").addEventListener("click",()=>{if(previewId)openConversation(previewId);else notify("Диалогты алдымен жүктеңіз",true)});
+$("#showAll").addEventListener("click",()=>{document.querySelector("#dialogTable")?.scrollIntoView({behavior:"smooth"});$("#search").focus()});
+$("#notificationBtn").addEventListener("click",()=>view("reviews"));
+$("#helpBtn").addEventListener("click",()=>notify("Диалогты таңдаңыз, AI бағалауын іске қосыңыз және критерийлер бойынша нәтижелерді қараңыз."));
+$("#analyticsNav").addEventListener("click",()=>{view("dashboard");document.querySelector(".chart-grid")?.scrollIntoView({behavior:"smooth"})});
+$("#mobileMenu").addEventListener("click",()=>$("#sidebar").classList.toggle("open"));
+document.querySelectorAll(".side-link").forEach(b=>b.addEventListener("click",()=>$("#sidebar").classList.remove("open")));
+$("#topSearch").addEventListener("input",e=>{$("#search").value=e.target.value;view("dashboard");renderDashboard()});
+$("#search").addEventListener("input",e=>{if($("#topSearch").value!==e.target.value)$("#topSearch").value=e.target.value});
+document.addEventListener("keydown",e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="k"){e.preventDefault();$("#topSearch").focus()}if(e.key==="Escape")$("#sidebar").classList.remove("open")});
