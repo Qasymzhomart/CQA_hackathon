@@ -38,7 +38,7 @@ function jumpEvidence(text){
 }
 function renderEvaluation(e){
  if(!e){$("#evalMethod").textContent="";$("#evaluationBody").className="empty";$("#evaluationBody").textContent="Пока нет оценки. Нажмите «Запустить оценку».";return}
- const results=e.results||[],rows=e.criteria||[];$("#evalMethod").textContent=e.assessment_method==="demo_heuristics"?"Эвристика · DEMO":"Backend";
+ const results=e.results||[],rows=e.criteria||[];$("#evalMethod").textContent=e.assessment_method==="demo_heuristics"?"Эвристика · DEMO":e.assessment_method==="precomputed_submission"?"Gemini · DEV":e.assessment_method==="llm_structured"?"Gemini · LIVE":"Backend";
  const gross=e.gross_errors||[];$("#evaluationBody").className="";
  $("#evaluationBody").innerHTML='<div class="scorehero"><div><small>ИТОГОВАЯ ОЦЕНКА</small><strong>'+esc(Number(e.final_score).toFixed(2))+' <small style="display:inline">/100</small></strong></div><div class="hintscore">'+esc(statusLabel(e.status))+'<br>'+ (gross.length?'<span class="dangertext">Критическая ошибка</span>':'Без выявленных грубых ошибок')+'</div></div><div class="criteria">'+results.map(r=>{
  const c=criterionById(r.criterion_id),detail=rows.find(x=>x.criterion_id===r.criterion_id);const na=!!r.na;const flag=c.response_type==="flag";const val=flag?(r.raw_score>0?"ДА":"НЕТ"):na?"N/A":r.raw_score+" / "+c.scale_max;
@@ -104,7 +104,7 @@ document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>view(b.dataset
 ["search","lang","channel","status"].forEach(id=>document.getElementById(id).addEventListener(id==="search"?"input":"change",renderDashboard));
 $("#backBtn").onclick=()=>view("dashboard");$("#evaluateBtn").onclick=evaluate;$("#refreshReviews").onclick=loadReviews;$("#saveChecklist").onclick=saveChecklist;
 $("#addCriterion").onclick=()=>{syncEditor();state.checklist.push({id:"custom_"+Date.now(),name:"Новый критерий",description:"",weight:0,response_type:"binary",allow_na:false,scale_max:1});renderEditor()};
-$("#demoBtn").onclick=async()=>{try{await importRecords(demo)}catch(e){notify("Ошибка загрузки демо: "+e.message,true)}};
+$("#demoBtn").onclick=async()=>{const b=$("#demoBtn");b.disabled=true;b.textContent="Загружаем DEV…";try{const r=await api("/api/demo/load-dev",{method:"POST"});await initialize();notify("DEV загружен: "+r.imported+" диалогов · готовых оценок: "+r.evaluations_loaded)}catch(e){notify("Ошибка загрузки DEV: "+e.message,true)}finally{b.disabled=false;b.textContent="Загрузить DEV 65"}};
 $("#importBtn").onclick=()=>$("#jsonFile").click();
 $("#jsonFile").onchange=async e=>{const file=e.target.files[0];if(!file)return;try{const obj=JSON.parse(await file.text());const records=Array.isArray(obj)?obj:obj.data?.records||obj.records;if(!Array.isArray(records))throw Error("Ожидается JSON-массив или data.records");await importRecords(records)}catch(err){notify("Импорт не удался: "+err.message,true)}finally{e.target.value=""}};
 $("#appealCancel").onclick=()=>$("#appealModal").close();$("#appealForm").onsubmit=submitAppeal;
